@@ -1,12 +1,43 @@
+import csv
+import os
+from datetime import date
+from datetime import datetime
+
 import cv2 as cv
 import face_recognition
-import os
 import numpy as np
 
 path = 'Images'
 images = []
 classNames = []
 myList = os.listdir(path)
+today = date.today()
+
+
+def create_dir(parentDirectory, childDirectory):
+    try:
+        Path = os.path.join(parentDirectory, childDirectory)
+        os.mkdir(Path)
+
+    except FileExistsError:
+        pass
+
+
+def create_csv_file(Name, filename):
+    create_dir('Attendance', str(today))
+    with open(f'Attendance/{str(today)}/{filename}', "r+", newline="") as csvfile:
+        prev_data = csvfile.readlines()
+        name_list = []
+
+        for line in prev_data:
+            entry = line.split(',')
+            name_list.append(entry[0])
+        if Name not in name_list:
+            now = datetime.now()
+            data = csv.writer(csvfile)
+            x = [Name, now.strftime("%H:%M:%S")]
+            data.writerow(x)
+
 
 for cls in myList:
     currImg = cv.imread(f"{path}/{cls}")
@@ -32,6 +63,7 @@ face_loc_known_face, encoding_known_face = find_face_loc_encodings(images)
 
 cam = cv.VideoCapture(0)
 
+old_name = ''
 while True:
     success, img = cam.read()
     img_small = cv.resize(img, (0, 0), None, 0.25, 0.25)
@@ -48,6 +80,10 @@ while True:
 
         if matches[match_index]:
             name = classNames[match_index].upper()
+            if name != old_name:
+                old_name = name
+                create_csv_file(old_name, 'Attendance.csv')
+
             y1, x2, y2, x1 = face_loc
             y1, x2, y2, x1 = y1*4, x2*4, y2*4, x1*4
             cv.rectangle(img, (x1, y1), (x2, y2), (0, 255, 255), 2)
